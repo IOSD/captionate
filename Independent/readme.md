@@ -5,6 +5,18 @@ A Neural Network to generate captions for an image.
 <h2>Members</h2>
 <strong>Ajay Dabas - DTU</strong>
 
+<p align="center">
+  <strong>Examples</strong>
+</p>
+
+<p align="center">
+  <img src="https://cdn-images-1.medium.com/max/1600/1*6BFOIdSHlk24Z3DFEakvnQ.png" width="85%" title="Example of Image Captioning" alt="Example of Image Captioning">
+</p>
+
+<p align="center">
+	Credits : <a href="https://towardsdatascience.com/image-captioning-in-deep-learning-9cd23fb4d8d2">Towardsdatascience</a>
+</p>
+
 <h1>Requirements</h1>
 
 Recommended System Requirements to train model.
