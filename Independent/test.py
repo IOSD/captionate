@@ -1,61 +1,65 @@
-from pickle import load
-from utils.model import *
-from keras.models import load_model
-import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+from pickle import load
+import matplotlib.pyplot as plt
+from keras.models import load_model
+from keras.preprocessing.image import load_img, img_to_array
+from utils.model import CNNModel, generate_caption
+import os
 
+from config import config
 
-# extract features from each photo in the directory
-def extract_features(filename):
-	model = defineCNNmodel()
-	# load the photo
-	image = load_img(filename, target_size=(224, 224))
-	# convert the image pixels to a numpy array
+# Extract features from each image in the directory
+def extract_features(filename, model, model_type):
+	if model_type == 'inceptionv3':
+		from keras.applications.inception_v3 import preprocess_input
+		target_size = (299, 299)
+	elif model_type == 'vgg16':
+		from keras.applications.vgg16 import preprocess_input
+		target_size = (224, 224)
+	# Loading and resizing image
+	image = load_img(filename, target_size=target_size)
+	# Convert the image pixels to a numpy array
 	image = img_to_array(image)
-	# reshape data for the model
+	# Reshape data for the model
 	image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
-	# prepare the image for the VGG model
+	# Prepare the image for the CNN Model model
 	image = preprocess_input(image)
-	# get features
-	feature = model.predict(image, verbose=0)
-	return feature
+	# Pass image into model to get encoded features
+	features = model.predict(image, verbose=0)
+	return features
 
-# load the tokenizer
-tokenizer_path = 'model_data/tokenizer.pkl'
+# Load the tokenizer
+tokenizer_path = config['tokenizer_path']
 tokenizer = load(open(tokenizer_path, 'rb'))
 
-# pre-define the max sequence length (from training)
-max_length = 34
+# Max sequence length (from training)
+max_length = config['max_length']
 
-# load the model
-model_path = 'model_data/model_19.h5'
-model = load_model(model_path)
+# Load the model
+caption_model = load_model(config['model_load_path'])
 
-# load and prepare the photograph
-test_path = 'test_data'
-for image_file in os.listdir(test_path):
-        try:
-            image_type = imghdr.what(os.path.join(test_path, image_file))
-            if not image_type:
-                continue
-        except IsADirectoryError:
-            continue
-image = extract_features(image_file)
+image_model = CNNModel(config['model_type'])
 
-# generate description
-description = generate_desc(model, tokenizer, image, max_length)
-
-# remove startseq and endseq
-caption = 'Caption: ' + description.split()[1].capitalize()
-for x in description.split()[2:len(description.split())-1]:
-    caption = caption + ' ' + x
-caption += '.'
-
-# Show image and it's caption
-pil_im = Image.open(image_file, 'r')
-fig, ax = plt.subplots(figsize=(8, 8))
-ax.get_xaxis().set_visible(False)
-ax.get_yaxis().set_visible(False)
-_ = ax.imshow(np.asarray(pil_im), interpolation='nearest')
-_ = ax.set_title(caption,fontdict={'fontsize': '20','fontweight' : '40'})
+# Load and prepare the image
+for image_file in os.listdir(config['test_data_path']):
+	if(image_file.split('--')[0]=='output'):
+		continue
+	if(image_file.split('.')[1]=='jpg' or image_file.split('.')[1]=='jpeg'):
+		# Encode image using CNN Model
+		image = extract_features(config['test_data_path']+image_file, image_model, config['model_type'])
+		# Generate caption using Decoder RNN Model
+		generated_caption = generate_caption(caption_model, tokenizer, image, max_length)
+		# Remove startseq and endseq
+		caption = 'Caption: ' + generated_caption.split()[1].capitalize()
+		for x in generated_caption.split()[2:len(generated_caption.split())-1]:
+		    caption = caption + ' ' + x
+		caption += '.'
+		# Show image and its caption
+		pil_im = Image.open(config['test_data_path']+image_file, 'r')
+		fig, ax = plt.subplots(figsize=(8, 8))
+		ax.get_xaxis().set_visible(False)
+		ax.get_yaxis().set_visible(False)
+		_ = ax.imshow(np.asarray(pil_im), interpolation='nearest')
+		_ = ax.set_title(caption,fontdict={'fontsize': '20','fontweight' : '40'})
+		plt.savefig(config['test_data_path']+'output--'+image_file)

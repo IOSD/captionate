@@ -1,99 +1,142 @@
-from numpy import argmax
+import numpy as np
+# Keras
 from keras.applications.inception_v3 import InceptionV3
+from keras.applications.vgg16 import VGG16
 from keras.models import Model
-from keras.layers import Input
-from keras.layers import Dense
-from keras.layers import LSTM
-from keras.layers import Embedding
-from keras.layers import Dropout
-from keras.layers.merge import add
+from keras.layers import Input, Dense, Dropout, LSTM, Embedding, concatenate, RepeatVector, TimeDistributed, Bidirectional
 from keras.preprocessing.sequence import pad_sequences
-from keras.preprocessing.image import load_img, img_to_array
+from tqdm import tqdm
+# To measure BLEU Score
 from nltk.translate.bleu_score import corpus_bleu
 
-from keras.models import Sequential
-from keras.layers import LSTM, Embedding, TimeDistributed, Dense, RepeatVector, Merge, Activation, Flatten
-from keras.optimizers import Adam, RMSprop
-from keras.layers.wrappers import Bidirectional
+"""
+	*Define the CNN model
+"""
+def CNNModel(model_type):
+	if model_type == 'inceptionv3':
+		model = InceptionV3()
+	elif model_type == 'vgg16':
+		model = VGG16()
+	model.layers.pop()
+	model = Model(inputs=model.inputs, outputs=model.layers[-1].output)
+	return model
 
+"""
+	*Define the RNN model
+"""
+def RNNModel(vocab_size, max_len, rnnConfig, model_type):
+	embedding_size = rnnConfig['embedding_size']
+	if model_type == 'inceptionv3':
+		# InceptionV3 outputs a 2048 dimensional vector for each image, which we'll feed to RNN Model
+		image_input = Input(shape=(2048,))
+	elif model_type == 'vgg16':
+		# VGG16 outputs a 4096 dimensional vector for each image, which we'll feed to RNN Model
+		image_input = Input(shape=(4096,))
+	image_model_1 = Dropout(rnnConfig['dropout'])(image_input)
+	image_model = Dense(embedding_size, activation='relu')(image_model_1)
 
-# define the CNN model
-def defineCNNmodel():
-	model = InceptionV3()
- 	model.layers.pop()
- 	model = Model(inputs=model.inputs, outputs=model.layers[-1].output)
- 	#print(model.summary())
- 	return model
+	caption_input = Input(shape=(max_len,))
+	# mask_zero: We zero pad inputs to the same length, the zero mask ignores those inputs. E.g. it is an efficiency.
+	caption_model_1 = Embedding(vocab_size, embedding_size, mask_zero=True)(caption_input)
+	caption_model_2 = Dropout(rnnConfig['dropout'])(caption_model_1)
+	caption_model = LSTM(rnnConfig['LSTM_units'])(caption_model_2)
 
-# define the RNN model
-def defineRNNmodel(vocab_size, max_len):
-	embedding_size = 300
-    # Input dimension is 2048 since we will feed it the encoded version of the image.
-    image_model = Sequential([
-        Dense(embedding_size, input_shape=(2048,), activation='relu'),
-        RepeatVector(max_len)
-    ])
-    # Since we are going to predict the next word using the previous words(length of previous words changes with every iteration over the caption), we have to set return_sequences = True.
-    caption_model  = Sequential([
-        Embedding(vocab_size, embedding_size, input_length=max_len),
-        LSTM(256, return_sequences=True),
-        TimeDistributed(Dense(300))
-    ])
-    # Merging the models and creating a softmax classifier
-    final_model = Sequential([
-        Merge([image_model, caption_model], mode='concat', concat_axis=1),
-        Bidirectional(LSTM(256, return_sequences=False)),
-        Dense(vocab_size),
-        Activation('softmax')
-    ])
-    final_model.compile(loss='categorical_crossentropy', optimizer=RMSprop(), metrics=['accuracy'])
-    final_model.summary()
-    return final_model
+	# Merging the models and creating a softmax classifier
+	final_model_1 = concatenate([image_model, caption_model])
+	final_model_2 = Dense(rnnConfig['dense_units'], activation='relu')(final_model_1)
+	final_model = Dense(vocab_size, activation='softmax')(final_model_2)
 
+	model = Model(inputs=[image_input, caption_input], outputs=final_model)
+	model.compile(loss='categorical_crossentropy', optimizer='adam')
+	return model
 
-# map an integer to a word
-def word_for_id(integer, tokenizer):
+"""
+	*Define the RNN model with different architecture
+"""
+def AlternativeRNNModel(vocab_size, max_len, rnnConfig, model_type):
+	embedding_size = rnnConfig['embedding_size']
+	if model_type == 'inceptionv3':
+		# InceptionV3 outputs a 2048 dimensional vector for each image, which we'll feed to RNN Model
+		image_input = Input(shape=(2048,))
+	elif model_type == 'vgg16':
+		# VGG16 outputs a 4096 dimensional vector for each image, which we'll feed to RNN Model
+		image_input = Input(shape=(4096,))
+	image_model_1 = Dense(embedding_size, activation='relu')(image_input)
+	image_model = RepeatVector(max_len)(image_model_1)
+
+	caption_input = Input(shape=(max_len,))
+	# mask_zero: We zero pad inputs to the same length, the zero mask ignores those inputs. E.g. it is an efficiency.
+	caption_model_1 = Embedding(vocab_size, embedding_size, mask_zero=True)(caption_input)
+	# Since we are going to predict the next word using the previous words
+	# (length of previous words changes with every iteration over the caption), we have to set return_sequences = True.
+	caption_model_2 = LSTM(rnnConfig['LSTM_units'], return_sequences=True)(caption_model_1)
+	# caption_model = TimeDistributed(Dense(embedding_size, activation='relu'))(caption_model_2)
+	caption_model = TimeDistributed(Dense(embedding_size))(caption_model_2)
+
+	# Merging the models and creating a softmax classifier
+	final_model_1 = concatenate([image_model, caption_model])
+	# final_model_2 = LSTM(rnnConfig['LSTM_units'], return_sequences=False)(final_model_1)
+	final_model_2 = Bidirectional(LSTM(rnnConfig['LSTM_units'], return_sequences=False))(final_model_1)
+	# final_model_3 = Dense(rnnConfig['dense_units'], activation='relu')(final_model_2)
+	# final_model = Dense(vocab_size, activation='softmax')(final_model_3)
+	final_model = Dense(vocab_size, activation='softmax')(final_model_2)
+
+	model = Model(inputs=[image_input, caption_input], outputs=final_model)
+	model.compile(loss='categorical_crossentropy', optimizer='adam')
+	# model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
+	return model
+
+"""
+	*Map an integer to a word
+"""
+def int_to_word(integer, tokenizer):
 	for word, index in tokenizer.word_index.items():
 		if index == integer:
 			return word
 	return None
 
-# generate a description for an image, given a pre-trained model and a tokenizer to map integer back to word
-def generate_desc(model, tokenizer, photo, max_length):
-	# seed the generation process
+"""
+	*Generate a caption for an image, given a pre-trained model and a tokenizer to map integer back to word
+"""
+def generate_caption(model, tokenizer, image, max_length):
+	# Seed the generation process
 	in_text = 'startseq'
-	# iterate over the whole length of the sequence
-	for i in range(max_length):
-		# integer encode input sequence
+	# Iterate over the whole length of the sequence
+	for _ in range(max_length):
+		# Integer encode input sequence
 		sequence = tokenizer.texts_to_sequences([in_text])[0]
-		# pad input
+		# Pad input
 		sequence = pad_sequences([sequence], maxlen=max_length)
-		# predict next word
-		yhat = model.predict([photo,sequence], verbose=0)
-		# convert probability to integer
-		yhat = argmax(yhat)
-		# map integer to word
-		word = word_for_id(yhat, tokenizer)
-		# stop if we cannot map the word
+		# Predict next word
+		# The model will output a prediction, which will be a probability distribution over all words in the vocabulary.
+		yhat = model.predict([image,sequence], verbose=0)
+		# The output vector representins a probability distribution where maximum probability is the predicted word position
+		# Take output class with maximum probability and convert to integer
+		yhat = np.argmax(yhat)
+		# Map integer back to word
+		word = int_to_word(yhat, tokenizer)
+		# Stop if we cannot map the word
 		if word is None:
 			break
-		# append as input for generating the next word
+		# Append as input for generating the next word
 		in_text += ' ' + word
-		# stop if we predict the end of the sequence
+		# Stop if we predict the end of the sequence
 		if word == 'endseq':
 			break
 	return in_text
 
-
-def evaluate_model(model, photos, descriptions, tokenizer, max_length):
+"""
+	*Evaluate the model on BLEU Score
+"""
+def evaluate_model(model, images, captions, tokenizer, max_length):
 	actual, predicted = list(), list()
-	
-	for key, desc_list in descriptions.items():
-		yhat = generate_desc(model, tokenizer, photos[key], max_length)
-		references = [d.split() for d in desc_list]
-		actual.append(references)
+	for image_id, caption_list in tqdm(captions.items()):
+		yhat = generate_caption(model, tokenizer, images[image_id], max_length)
+		ground_truth = [caption.split() for caption in caption_list]
+		actual.append(ground_truth)
 		predicted.append(yhat.split())
-
+	print('BLEU Scores :')
+	print('A perfect match results in a score of 1.0, whereas a perfect mismatch results in a score of 0.0.')
 	print('BLEU-1: %f' % corpus_bleu(actual, predicted, weights=(1.0, 0, 0, 0)))
 	print('BLEU-2: %f' % corpus_bleu(actual, predicted, weights=(0.5, 0.5, 0, 0)))
 	print('BLEU-3: %f' % corpus_bleu(actual, predicted, weights=(0.3, 0.3, 0.3, 0)))
