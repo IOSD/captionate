@@ -1,26 +1,60 @@
-# Captionate - Image Captioning Toolkit
-Task is to design a Deep Learning+NLP based toolkit (python-library) which can input images and generate textual description of the Image. Further addons to the project can be a web application where the user can upload an image and get the caption for input image or an Android/iOS application where the user can capture/upload an image and get the caption generated using this toolkit.
+<h1>Image Caption Generator</h1>
 
-**Skills Required:** Python, Object-Oriented Programming, NLP, Famous DL Libraries like Tensorflow or Keras. Optional Skills include Full stack web app, Android/iOS App Development.
+A Neural Network to generate captions for an image.
 
-## Resources to get started
+<h2>Members</h2>
+<strong>Ajay Dabas - DTU</strong>
 
-1. [COCO Dataset](http://cocodataset.org/#overview)
-2. [Flicker 8k Dataset](http://nlp.cs.illinois.edu/HockenmaierGroup/8k-pictures.html)
-3. [Flicker 30k Dataset](http://shannon.cs.illinois.edu/DenotationGraph/)
-4. [Implementation in PyTorch](https://www.analyticsvidhya.com/blog/2018/04/solving-an-image-captioning-task-using-deep-learning/)
-5. [Keras Implementation](https://machinelearningmastery.com/develop-a-deep-learning-caption-generation-model-in-python/)
-6. [Another Keras Implementation](https://github.com/yashk2810/Image-Captioning)
-7. [Another Implementation using PyTorch](https://github.com/yunjey/pytorch-tutorial/tree/master/tutorials/03-advanced/image_captioning)
-8. [Understanding Project at Root Level](https://cs.stanford.edu/people/karpathy/sfmltalk.pdf)
-9. [Research Paper on Convolutional Image Captioning](https://arxiv.org/pdf/1711.09151.pdf)
-10. [Intro to RNN](https://www.analyticsvidhya.com/blog/2017/12/introduction-to-recurrent-neural-networks/)
-11. [Understanding RNN & LSTM](https://deeplearning4j.org/lstm.html)
-12. [Understanding CNN](https://adeshpande3.github.io/A-Beginner%27s-Guide-To-Understanding-Convolutional-Neural-Networks/) - Part 2 link in article.
+<p align="center">
+  <strong>Examples</strong>
+</p>
 
+<p align="center">
+  <img src="https://cdn-images-1.medium.com/max/1600/1*6BFOIdSHlk24Z3DFEakvnQ.png" width="85%" title="Example of Image Captioning" alt="Example of Image Captioning">
+</p>
 
-### Senior Mentors for this Project
+<p align="center">
+	Credits : <a href="https://towardsdatascience.com/image-captioning-in-deep-learning-9cd23fb4d8d2">Towardsdatascience</a>
+</p>
 
-* [Nikhil Pandey](https://github.com/menikhilpandey)
-* [Ronak Sakhuja](https://github.com/ronaksakhuja)
-* [Rajat](https://github.com/rajat2712)
+<h1>Requirements</h1>
+
+Recommended System Requirements to train model.
+
+<ul type="square">
+	<li>A good CPU and a GPU</li>
+	<li>Atleast 8gb of RAM</li>
+</ul>
+
+Required Libraries for python
+
+<ul type="square">
+	<li>Keras</li>
+	<li>Pillow</li>
+	<li>nltk</li>
+	<li>Matplotlib</li>
+</ul>
+
+Flickr8k Dataset: <a href="https://forms.illinois.edu/sec/1713398">Dataset Request Form</a>
+
+<strong>Important:</strong> After downloading the dataset, put the reqired files in train_data folder
+
+<h1>Procedure to Train Model</h1>
+<ol>
+	<li>Clone the repository to preserve directory structure</li>
+	<li>Put the required data files in train_data Folder</li>
+	<li>Run train.py</li>
+</ol>
+
+<h1>Procedure to Test on new image(s)</h1>
+<ol>
+	<li>Clone the repository to preserve directory structure</li>
+	<li>Put the test image(s) in test_data folder</li>
+	<li>Run test.py</li>
+</ol>
+
+<h1>References</h1>
+
+<ul type="square">
+	<li><a href="https://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Vinyals_Show_and_Tell_2015_CVPR_paper.pdf">Show and Tell: A Neural Image Caption Generator</a> - Oriol Vinyals, Alexander Toshev, Samy Bengio, Dumitru Erhan</li>
+</ul>
